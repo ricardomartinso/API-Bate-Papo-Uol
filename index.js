@@ -1,12 +1,14 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
+import dotenv from "dotenv";
 
 const app = express();
+dotenv.config();
 app.use(cors());
 app.use(express.json());
 
-const mongoClient = new MongoClient("mongodb://127.0.0.1:27017");
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
 
 mongoClient.connect().then(() => {
@@ -45,6 +47,13 @@ app.post("/participants", (req, res) => {
         });
     }
   });
+});
+app.get("/messages", (req, res) => {});
+
+app.post("/messages", (req, res) => {
+  const message = req.body;
+
+  res.status(201);
 });
 
 app.listen(5000);
