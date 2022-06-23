@@ -48,19 +48,27 @@ app.post("/participants", async (req, res) => {
   }
 });
 
-app.get("/messages", (req, res) => {
+app.get("/messages", async (req, res) => {
   const user = req.headers.user;
   const limit = parseInt(req.query.limit);
+  const messages = await db.collection("messages").find().toArray();
+
+  if (limit === NaN) {
+    res.send(messages);
+    return;
+  }
+  res.send(messages.slice(-`${limit}`));
 });
 
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
+  const { user } = req.headers;
   try {
     if (!to || !text) {
       res.sendStatus(422);
       return;
     }
-    await db.collection("messages").insertOne({ to, text, type });
+    await db.collection("messages").insertOne({ to, text, type, from: user });
     res.sendStatus(201);
   } catch (err) {
     console.log(err);
