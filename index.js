@@ -15,45 +15,73 @@ mongoClient.connect().then(() => {
   db = mongoClient.db("api-batepapo-uol");
 });
 
-app.get("/participants", (req, res) => {
-  db.collection("participants")
-    .find()
-    .toArray()
-    .then((participants) => {
-      res.send(participants);
-    });
+app.get("/participants", async (req, res) => {
+  try {
+    const participants = await db.collection("participants").find().toArray();
+    res.send(participants);
+  } catch {
+    res.sendStatus(422);
+  }
 });
 
-app.post("/participants", (req, res) => {
+app.post("/participants", async (req, res) => {
   if (!req.body.name) {
     res.sendStatus(422);
     return;
   }
-  const usersPromise = db.collection("participants").find().toArray();
-
-  usersPromise.then((participants) => {
-    const repeatedUser = participants.filter(
-      (user) => user.name === req.body.name
-    );
+  try {
+    const users = await db.collection("participants").find().toArray();
+    const repeatedUser = users.filter((user) => user.name === req.body.name);
 
     if (repeatedUser.length === 1) {
       res.sendStatus(409);
       return;
     } else {
-      db.collection("participants")
-        .insertOne({ name: req.body.name, lastStatus: Date.now() })
-        .then(() => {
-          res.sendStatus(201);
-        });
+      await db
+        .collection("participants")
+        .insertOne({ name: req.body.name, lastStatus: Date.now() });
+      res.sendStatus(201);
     }
-  });
-});
-app.get("/messages", (req, res) => {});
-
-app.post("/messages", (req, res) => {
-  const message = req.body;
-
-  res.status(201);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(422);
+  }
 });
 
+app.get("/messages", (req, res) => {
+  const user = req.headers.user;
+  const limit = parseInt(req.query.limit);
+});
+
+app.post("/messages", async (req, res) => {
+  const { to, text, type } = req.body;
+  try {
+    if (!to || !text) {
+      res.sendStatus(422);
+      return;
+    }
+    await db.collection("messages").insertOne({ to, text, type });
+    res.sendStatus(201);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(422);
+  }
+});
+app.post("/status", async (req, res) => {
+  const { user } = req.headers;
+  try {
+    const participants = await db.collection("participants").find().toArray();
+    const participantExist = participants.filter(
+      (participant) => participant.name === user
+    );
+    if (participantExist.length === 0 || participantExist === undefined) {
+      res.sendStatus(404);
+    } else {
+      res.sendStatus(200);
+    }
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(404);
+  }
+});
 app.listen(5000);
