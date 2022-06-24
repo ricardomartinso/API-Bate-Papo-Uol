@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
+import joi from "joi";
 
 const app = express();
 dotenv.config();
@@ -14,6 +15,9 @@ let db;
 mongoClient.connect().then(() => {
   db = mongoClient.db("api-batepapo-uol");
 });
+const userSchema = joi.object({
+  name: joi.string().required(),
+});
 
 app.get("/participants", async (req, res) => {
   try {
@@ -25,10 +29,14 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/participants", async (req, res) => {
-  if (!req.body.name) {
-    res.sendStatus(422);
+  const validation = userSchema.validate(req.body, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map((item) => item.message);
+    res.send(errors);
     return;
   }
+
   try {
     const users = await db.collection("participants").find().toArray();
     const repeatedUser = users.filter((user) => user.name === req.body.name);
