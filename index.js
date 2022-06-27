@@ -52,19 +52,18 @@ app.post("/participants", async (req, res) => {
     if (repeatedUser.length === 1) {
       res.sendStatus(409);
       return;
-    } else {
-      await db.collection("messages").insertOne({
-        from: req.body.name,
-        to: "Todos",
-        type: "status",
-        text: "entra na sala...",
-        time: dayjs().format("HH:mm:ss"),
-      });
-      await db
-        .collection("participants")
-        .insertOne({ name: req.body.name, lastStatus: Date.now() });
-      res.status(201).send();
     }
+    await db.collection("messages").insertOne({
+      from: req.body.name,
+      to: "Todos",
+      type: "status",
+      text: "entra na sala...",
+      time: dayjs().format("HH:mm:ss"),
+    });
+    await db
+      .collection("participants")
+      .insertOne({ name: req.body.name, lastStatus: Date.now() });
+    res.status(201).send();
   } catch (err) {
     console.log(err);
     res.sendStatus(422);
@@ -108,8 +107,6 @@ app.post("/messages", async (req, res) => {
   const validation = messageSchema.validate(userMessage);
   const userExist = await db.collection("participants").findOne({ name: user });
 
-  console.log(userExist);
-
   if (!userExist) {
     return res.status(422).send("Usuário não existe");
   }
@@ -135,8 +132,8 @@ app.post("/status", async (req, res) => {
     const participantExist = participants.filter(
       (participant) => participant.name === user
     );
-    if (!participantExist) {
-      return res.sendStatus(404);
+    if (participantExist.length === 0) {
+      return res.status(404).send();
     }
     await db.collection("participants").updateOne(
       { name: user },
